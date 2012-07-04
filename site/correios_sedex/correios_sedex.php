@@ -317,9 +317,23 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
                         $cart->cep_simulacao
         );
 
+		//verificar se está no Brasil
+		if ($cart->ST["virtuemart_country_id"] != 30) {
+			$mainframe->enqueueMessage('Sedex erro: Somente para entregas no Brasil');
+			return false;
+		}
+		//verificar o valor máximo
+		if ($cart_prices->billTotal > 10000) {
+			$mainframe->enqueueMessage("Sedex erro: Excede o valor m&aacute;ximo para uso do servi&ccedil;o. (R$ 10.000,00)");
+			return false;
+		}
 
-        if ($user->id != 0) { // se estiver logado faz as verificações
-            $this->logado = true;
+
+
+
+
+
+
             //verificar se o usuário preencheu o cep no cadastro do endereço de entrega
             if (!is_array($cart->ST)) {
                 $this->redireciona('index.php?option=com_virtuemart&view=user&task=editaddresscheckout&addrtype=ST', "Escolha o local de entrega ou cadastre um novo endereço");
@@ -327,22 +341,6 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
             }
 
             //verificar se o zip está correto
-
-            if (empty($cart->ST["zip"])) {
-                $this->redireciona('index.php?option=com_virtuemart&view=user&task=editaddresscheckout&addrtype=ST', "Preencha corretamente o endere&ccedil;o de entrega");
-                return false;
-            }
-            //verificar se está no Brasil
-            if ($cart->ST["virtuemart_country_id"] != 30) {
-                $mainframe->enqueueMessage('Sedex erro: Somente para entregas no Brasil');
-                return false;
-            }
-            //verificar o valor máximo
-            if ($cart_prices->billTotal > 10000) {
-                $mainframe->enqueueMessage("Sedex erro: Excede o valor m&aacute;ximo para uso do servi&ccedil;o. (R$ 10.000,00)");
-                return false;
-            }
-
 
 
             if (strlen($cepOrigem) < 8 || strlen($cepOrigem) > 8) {
@@ -354,8 +352,6 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
                 $mainframe->enqueueMessage("Sedex erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepDestino);
                 return false;
             }
-
-
             /* =================================
               Aplica a faixa de CEPs
               ================================== */
@@ -382,7 +378,7 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
             //deve fazer essa verificação para não enviar msg de aviso na tela de confirmação do pedido
             if (!count($cart->products))
                 return false;
-        }
+        
 
         // Verifica se o peso está dentro dos limites
         //não precisa estar logado

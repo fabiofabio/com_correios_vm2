@@ -207,10 +207,6 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
 
     function busca_preco_site_correios($cart, $method, $cart_prices) {
 
-
-
-
-
         //Define medidas e formato da embalagem
         //Usei os valores mínimos (16x11x2 Cm) para todas as medidas a seguir:
         //Comprimento médio dos pacotes utilizados para envio pelos Correios(Cm)
@@ -325,72 +321,58 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
                         $cart->cep_simulacao
         );
 
+		//verificar se está no Brasil
+		if ($cart->ST["virtuemart_country_id"] != 30) {
+			$mainframe->enqueueMessage('PAC erro: Somente para entregas no Brasil');
+			return false;
+		}
+		//verificar o valor máximo
+		if ($cart_prices->billTotal > 10000) {
+			$mainframe->enqueueMessage("PAC erro: Excede o valor m&aacute;ximo para uso do servi&ccedil;o. (R$ 10.000,00)");
+			return false;
+		}
 
-        if ($user->id != 0) { // se estiver logado faz as verificações
-            $this->logado = true;
-            //verificar se o usuário preencheu o cep no cadastro do endereço de entrega
-            if (!is_array($cart->ST)) {
-                $this->redireciona('index.php?option=com_virtuemart&view=user&task=editaddresscheckout&addrtype=ST', "Escolha o local de entrega ou cadastre um novo endereço");
-                return false;
-            }
+		if (strlen($cepOrigem) < 8 || strlen($cepOrigem) > 8) {
+			$mainframe->enqueueMessage("PAC erro: CEP da loja &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepOrigem);
+			return false;
+		}
 
-            //verificar se o zip está correto
+		if (strlen($cepDestino) < 8 || strlen($cepDestino) > 8) {
+			$mainframe->enqueueMessage("PAC erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepDestino);
+			return false;
+		}
 
-            if (empty($cart->ST["zip"])) {
-                $this->redireciona('index.php?option=com_virtuemart&view=user&task=editaddresscheckout&addrtype=ST', "Preencha corretamente o endere&ccedil;o de entrega");
-                return false;
-            }
-            //verificar se está no Brasil
-            if ($cart->ST["virtuemart_country_id"] != 30) {
-                $mainframe->enqueueMessage('PAC erro: Somente para entregas no Brasil');
-                return false;
-            }
-            //verificar o valor máximo
-            if ($cart_prices->billTotal > 10000) {
-                $mainframe->enqueueMessage("PAC erro: Excede o valor m&aacute;ximo para uso do servi&ccedil;o. (R$ 10.000,00)");
-                return false;
-            }
+		/* =================================
+		  Aplica a faixa de CEPs
+		  ================================== */
+
+		//Pega os CEPs da faixa de CEPs e remove símbolos indesejados (ex. 96840150)
+		$CepStart = ereg_replace('[^0-9]', '', $method->CepStart_SN);
+		$CepEnd = ereg_replace('[^0-9]', '', $method->CepEnd_SN);
+
+		if ($method->UsoFaixa_SN != "2") {
+			if ($method->UsoFaixa_SN == "0") {
+				if ($cepDestino < $CepStart || $cepDestino > $CepEnd) {
+					$mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
+					return false;
+				}
+			} else {
+				if ($cepDestino >= $CepStart && $cepDestino <= $CepEnd) {
+					$mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
+					return false;
+				}
+			}
+		}
+
+		//verifica se o carrinho está vazio (se a compra for efetuado o carrinho estará vazio)
+		//deve fazer essa verificação para não enviar msg de aviso na tela de confirmação do pedido
+		if (!count($cart->products))
+			return false;
+	
 
 
 
-            if (strlen($cepOrigem) < 8 || strlen($cepOrigem) > 8) {
-                $mainframe->enqueueMessage("PAC erro: CEP da loja &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepOrigem);
-                return false;
-            }
 
-            if (strlen($cepDestino) < 8 || strlen($cepDestino) > 8) {
-                $mainframe->enqueueMessage("PAC erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepDestino);
-                return false;
-            }
-
-
-            /* =================================
-              Aplica a faixa de CEPs
-              ================================== */
-
-            //Pega os CEPs da faixa de CEPs e remove símbolos indesejados (ex. 96840150)
-            $CepStart = ereg_replace('[^0-9]', '', $method->CepStart_SN);
-            $CepEnd = ereg_replace('[^0-9]', '', $method->CepEnd_SN);
-
-            if ($method->UsoFaixa_SN != "2") {
-                if ($method->UsoFaixa_SN == "0") {
-                    if ($cepDestino < $CepStart || $cepDestino > $CepEnd) {
-                        $mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
-                        return false;
-                    }
-                } else {
-                    if ($cepDestino >= $CepStart && $cepDestino <= $CepEnd) {
-                        $mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
-                        return false;
-                    }
-                }
-            }
-
-            //verifica se o carrinho está vazio (se a compra for efetuado o carrinho estará vazio)
-            //deve fazer essa verificação para não enviar msg de aviso na tela de confirmação do pedido
-            if (!count($cart->products))
-                return false;
-        }
 
         // Verifica se o peso está dentro dos limites
         //não precisa estar logado

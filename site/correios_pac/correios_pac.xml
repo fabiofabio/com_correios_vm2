@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <install version="1.5" type="plugin" group="vmshipment" >
     <name>Correios PAC</name>
-    <creationDate>DECEMBER 2011</creationDate>
-    <author>FÁBIO PAIVA</author>
-    <authorUrl>fabio@paiva.info</authorUrl>
-    <copyright>Copyright (C) 2011-2011 Fábio Paiva. All rights reserved.</copyright>
+    <creationDate>Julho 2012</creationDate>
+    <author>Fábio Paiva, Luiz F. Weber </author>
+    <authorUrl>http://virtuemartpro.com.br</authorUrl>
+    <copyright>Copyright (C) 2012. All rights reserved.</copyright>
     <license>http://www.gnu.org/licenses/gpl-3.0.html GNU/GPL</license>
-    <version>1.0B</version>
+    <version>1.1</version>
     <description>Plugin Virtuemart Correios PAC</description>    
     <files>
 	<filename plugin="correios_pac">correios_pac.php</filename>	
@@ -81,7 +81,7 @@
             <option value="0">0 - Nenhum</option>
             <option value="2">2 - 9.75%</option>
         </param>        
-<param type="spacer" default="&lt;br/&gt;&lt;a target='_blank' href='https://pagseguro.uol.com.br/security/webpagamentos/webdoacao.aspx?email_cobranca=fabio@paiva.info&amp;moeda=BRL'&gt;&lt;img src='https://pagseguro.uol.com.br/Security/Imagens/FacaSuaDoacao.gif' /&gt;&lt;/a&gt;" level="level4" />
+	<param type="spacer" default="&lt;br/&gt;&lt;a target='_blank' href='https://pagseguro.uol.com.br/security/webpagamentos/webdoacao.aspx?email_cobranca=fabio@paiva.info&amp;moeda=BRL'&gt;&lt;img src='https://pagseguro.uol.com.br/Security/Imagens/FacaSuaDoacao.gif' /&gt;&lt;/a&gt;" level="level4" />
     </params>
 
     <fieldset addpath="/administrator/components/com_virtuemart/elements">

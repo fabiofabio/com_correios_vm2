@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <install version="1.5" type="plugin" group="vmshipment" >
     <name>Correios Sedex</name>
-    <creationDate>DECEMBER 2011</creationDate>
-    <author>FÁBIO PAIVA</author>
-    <authorUrl>fabio@paiva.info</authorUrl>
-    <copyright>Copyright (C) 2011-2011 Fábio Paiva. All rights reserved.</copyright>
+    <creationDate>Julho 2012</creationDate>
+    <author>Fábio Paiva, Luiz F. Weber </author>
+    <authorUrl>http://virtuemartpro.com.br</authorUrl>
+    <copyright>Copyright (C) 2012. All rights reserved.</copyright>
     <license>http://www.gnu.org/licenses/gpl-3.0.html GNU/GPL</license>
-    <version>1.0Beta</version>
+    <version>1.1</version>
     <description>Plugin Virtuemart Correios Sedex</description>    
     <files>
 	<filename plugin="correios_sedex">correios_sedex.php</filename>	
