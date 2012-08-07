@@ -64,7 +64,7 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
 
     /**
      * Create the table for this plugin if it does not yet exist.
-     * @author Val√©rie Isaksen
+     * @author Val√É¬©rie Isaksen
      */
     protected function getVmPluginCreateTableSQL() {
 
@@ -93,7 +93,7 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
      *
      * @param integer $order_number The order Number
      * @return mixed Null for shipments that aren't active, text (HTML) otherwise
-     * @author Val√©rie Isaksen
+     * @author Val√É¬©rie Isaksen
      * @author Max Milbers
      */
     public function plgVmOnShowOrderFEShipment($virtuemart_order_id, $virtuemart_shipmentmethod_id, &$shipment_name) {
@@ -206,22 +206,21 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
     }
 
     function busca_preco_site_correios($cart, $method, $cart_prices) {
-
         //Define medidas e formato da embalagem
-        //Usei os valores mÌnimos (16x11x2 Cm) para todas as medidas a seguir:
-        //Comprimento mÈdio dos pacotes utilizados para envio pelos Correios(Cm)
+        //Usei os valores m√≠nimos (16x11x2 Cm) para todas as medidas a seguir:
+        //Comprimento m√©dio dos pacotes utilizados para envio pelos Correios(Cm)
         $this->Order_Length = $method->Comprimento_SN;
         if ($this->Order_Length < 16) {
             $this->Order_Length = "16";
         }
 
-        //Largura/Di‚metro mÈdio dos pacotes utilizados para envio pelos Correios(Cm)
+        //Largura/Di√¢metro m√©dio dos pacotes utilizados para envio pelos Correios(Cm)
         $this->Order_Width = $method->Larg_Diam_SN;
         if ($this->Order_Width < 11) {
             $this->Order_Width = "11";
         }
 
-        //Altura mÈdia dos pacotes utilizados para envio pelos Correios(Cm)
+        //Altura m√©dia dos pacotes utilizados para envio pelos Correios(Cm)
         $this->Order_Height = $method->Altura_SN;
         if ($this->Order_Height < 2) {
             $this->Order_Height = "2";
@@ -230,7 +229,7 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
         //Tipo de embrulho dos Correios
         $this->Order_Formatos = $method->Formatos_SN;
 
-        // Define se o formato È rolo ou pacote
+        // Define se o formato √© rolo ou pacote
         if ($this->Order_Formatos == 1) {
             $this->Opt1 = "&nVlLargura=";
             $this->Opt2 = "&nVlAltura=" . $this->Order_Height;
@@ -240,11 +239,11 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
         }
 
 
-        //Taxa de empacotamento e manuseio, e ser· acrescida aos custos de envio retornados pelos Correios
+        //Taxa de empacotamento e manuseio, e ser√° acrescida aos custos de envio retornados pelos Correios
         $this->Order_Handling_Fee = $method->Handling_Fee_SN;
         $this->Order_Handling_Fee = floatval(str_replace(",", ".", $this->Order_Handling_Fee));
 
-        //ServiÁo M„o PrÛpria dos Correios
+        //Servi√ßo M√£o Pr√≥pria dos Correios
         $this->Order_MaoPropria = $method->MaoPropria_SN;
 
         //Aviso de Recebimento dos Correios
@@ -278,40 +277,64 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
     }
 
     function xml_correios($url) {
+      	if(ini_get('allow_url_fopen') == '1') {
+			$conteudo = @file_get_contents(str_replace('&amp;','&',$url)); // Usa file_get_contents() 
+			if($conteudo === false){
+			  //echo "$nome_servico: Sistema Indispon√≠vel";
+              $this->erro_site_correios = "Erro SEDEX: N&atilde;o foi poss&iacute;vel conectar ao site dos correios, tente novamente mais tarde.";
+			  return false;
+			}
+		} else {
+			if (function_exists('curl_init')) {
+			   $ch = curl_init();
+			   curl_setopt($ch, CURLOPT_URL, $url); 
+			   curl_setopt($ch, CURLOPT_HEADER, 0); 
+			   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+			   curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.7.5) Gecko/20041107 Firefox/1.0'); 
+			   $conteudo = curl_exec($ch); 
+			   $curl_erro = curl_errno($ch);
+			   if(curl_errno($ch) != 0) {
+				  return false;
+			   }
+			   curl_close($ch);
+			} else {
+	            $this->erro_site_correios = "Erro SEDEX: N&atilde;o foi poss&iacute;vel conectar ao site dos correios, tente novamente mais tarde.";	
+			   return false;
+			}
+		}
+
         $xml = new DOMDocument();
-        if (@$xml->load($url)) {
+        if (@$xml->loadXML($conteudo)) {
+   	       $xml =  simplexml_load_string($conteudo);		
             $elementoMae = $xml->getElementsByTagName('cServico')->item(0);
             $valorFrete = $elementoMae->childNodes->item(1)->nodeValue;
             $prazoEntrega = $elementoMae->childNodes->item(2)->nodeValue;
             $msgerro = $elementoMae->getElementsByTagName("MsgErro")->item(0)->nodeValue;
             $erro = $elementoMae->getElementsByTagName("Erro")->item(0)->nodeValue;
         } else {
-            $this->erro_site_correios = "Erro PAC: N&atilde;o foi poss&iacute;vel conectar ao site dos correios, tente novamente mais tarde.";
+			// usa o simple xml file
+			$valorFrete = $xml->{'forma-pagamento'}->Valor;
+			$prazoEntrega = $xml->{'forma-pagamento'}->PrazoEntrega;
+			$msgerro = $xml->{'forma-pagamento'}->MsgErro;
+			$erro = $xml->{'forma-pagamento'}->Erro;
+            $this->erro_site_correios = "Erro SEDEX: N&atilde;o foi poss&iacute;vel conectar ao site dos correios, tente novamente mais tarde.";
             return false;
         }
         if ($erro) {
-            $this->erro_site_correios = "Aconteceu um erro no m&oacute;dulo PAC: " . $msgerro;
+            $this->erro_site_correios = "Aconteceu um erro no m&oacute;dulo SEDEX: " . $msgerro;
         }
-
 
         return array(
             "valor" => $valorFrete,
             "prazo" => $prazoEntrega,
             "erro" => $erro,
-            "msgErro" => $msgerro);
-    }
-
-    function redireciona($url, $msg = null) {        
-        if ($msg)
-            setcookie("Mensagem", utf8_encode("$msg"), time() + 3, "/");
-        header("Location:" . JRoute::_($url));
-        
+            "msgErro" => $msgerro
+		);
     }
 
     protected function checkConditions($cart, $method, $cart_prices) {
 
-        //verificar se o usu·rio est· logado        
-
+        //verificar se o usu√°rio est√° logado        
         $user = & JFactory::getUser();
         $this->logado = false;
         $mainframe = JFactory::getApplication();
@@ -321,61 +344,54 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
                         $cart->cep_simulacao
         );
 
-		//verificar se est· no Brasil
+		//verificar se est√° no Brasil
 		if ($cart->ST["virtuemart_country_id"] != 30) {
-			$mainframe->enqueueMessage('PAC erro: Somente para entregas no Brasil');
-			return false;
+			//$mainframe->enqueueMessage('PAC erro: Somente para entregas no Brasil');
+			//return false;
 		}
-		//verificar o valor m·ximo
+		//verificar o valor m√°ximo
 		if ($cart_prices->billTotal > 10000) {
 			$mainframe->enqueueMessage("PAC erro: Excede o valor m&aacute;ximo para uso do servi&ccedil;o. (R$ 10.000,00)");
 			return false;
 		}
 
-		if (strlen($cepOrigem) < 8 || strlen($cepOrigem) > 8) {
-			$mainframe->enqueueMessage("PAC erro: CEP da loja &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepOrigem);
+            if (strlen($cepOrigem) < 8 || strlen($cepOrigem) > 11) {
+                $mainframe->enqueueMessage("PAC erro: CEP da loja &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepOrigem);
+                return false;
+            }
+
+            if ((strlen($cepDestino) < 8 || strlen($cepDestino) > 11) and $this->JUser->id) {
+                $mainframe->enqueueMessage("PAC erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepDestino);
+                return false;
+            }
+            /* =================================
+              Aplica a faixa de CEPs
+              ================================== */
+
+            //Pega os CEPs da faixa de CEPs e remove s√≠mbolos indesejados (ex. 96840150)
+            $CepStart = ereg_replace('[^0-9]', '', $method->CepStart_SN);
+            $CepEnd = ereg_replace('[^0-9]', '', $method->CepEnd_SN);
+
+            if ($method->UsoFaixa_SN != "2") {
+                if ($method->UsoFaixa_SN == "0") {
+                    if ($cepDestino < $CepStart || $cepDestino > $CepEnd) {
+                        $mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
+                        return false;
+                    }
+                } else {
+                    if ($cepDestino >= $CepStart && $cepDestino <= $CepEnd) {
+                        $mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
+                        return false;
+                    }
+                }
+            }
+		//verifica se o carrinho est√° vazio (se a compra for efetuado o carrinho estar√° vazio)
+		//deve fazer essa verifica√ß√£o para n√£o enviar msg de aviso na tela de confirma√ß√£o do pedido
+		/*if (!count($cart->products))
 			return false;
-		}
-
-		if (strlen($cepDestino) < 8 || strlen($cepDestino) > 8) {
-			$mainframe->enqueueMessage("PAC erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepDestino);
-			return false;
-		}
-
-		/* =================================
-		  Aplica a faixa de CEPs
-		  ================================== */
-
-		//Pega os CEPs da faixa de CEPs e remove sÌmbolos indesejados (ex. 96840150)
-		$CepStart = ereg_replace('[^0-9]', '', $method->CepStart_SN);
-		$CepEnd = ereg_replace('[^0-9]', '', $method->CepEnd_SN);
-
-		if ($method->UsoFaixa_SN != "2") {
-			if ($method->UsoFaixa_SN == "0") {
-				if ($cepDestino < $CepStart || $cepDestino > $CepEnd) {
-					$mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
-					return false;
-				}
-			} else {
-				if ($cepDestino >= $CepStart && $cepDestino <= $CepEnd) {
-					$mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
-					return false;
-				}
-			}
-		}
-
-		//verifica se o carrinho est· vazio (se a compra for efetuado o carrinho estar· vazio)
-		//deve fazer essa verificaÁ„o para n„o enviar msg de aviso na tela de confirmaÁ„o do pedido
-		if (!count($cart->products))
-			return false;
-	
-
-
-
-
-
-        // Verifica se o peso est· dentro dos limites
-        //n„o precisa estar logado
+		*/
+        // Verifica se o peso est√° dentro dos limites
+        //n√£o precisa estar logado
         $this->Order_WeightKG = $this->peso_total($cart);
 
         if ($this->Order_WeightKG > 30) {
@@ -388,15 +404,13 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
             $this->Order_WeightKG = 0.01;
         }
 
-         if(empty($cepDestino))
-          return false;
-        
-
+         if(empty($cepDestino)) {
+			//$mainframe->enqueueMessage("Cep de Destino n√£o-preenchido.");
+			return false;
+		}
 
         // buscar info do site dos correios 
-
         $this->busca_preco_site_correios($cart, $method, $cart_prices);
-
 
         if ($this->erro_site_correios) {
             $mainframe->enqueueMessage($this->erro_site_correios);
@@ -457,7 +471,7 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
      * Check the conditions on Zip code
      * @param int $zip : zip code
      * @param $params paremters for this specific shiper
-     * @author Val√©rie Isaksen
+     * @author Val√É¬©rie Isaksen
      * @return string if Zip condition is ok or not
      */
     private function _zipCond($zip, $method) {
@@ -479,7 +493,7 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
      * Create the table for this plugin if it does not yet exist.
      * This functions checks if the called plugin is active one.
      * When yes it is calling the standard method to create the tables
-     * @author Val√©rie Isaksen
+     * @author Val√É¬©rie Isaksen
      *
      */
     function plgVmOnStoreInstallShipmentPluginTable($jplugin_id) {
@@ -491,7 +505,7 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
      * additional payment info in the cart.
      *
      * @author Max Milbers
-     * @author Val√©rie isaksen
+     * @author Val√É¬©rie isaksen
      *
      * @param VirtueMartCart $cart: the actual cart
      * @return null if the payment was not selected, true if the data is valid, error message if the data is not vlaid

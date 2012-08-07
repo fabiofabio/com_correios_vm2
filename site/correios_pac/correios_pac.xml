@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<install version="1.5" type="plugin" group="vmshipment" >
+<install version="1.5" type="plugin" group="vmshipment" method="upgrade">
     <name>Correios PAC</name>
     <creationDate>Julho 2012</creationDate>
     <author>Fábio Paiva, Luiz F. Weber </author>
