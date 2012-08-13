@@ -304,14 +304,14 @@ class plgVmShipmentCorreios_PAC extends vmPSPlugin {
 		}
 
         $xml = new DOMDocument();
-        if (@$xml->loadXML($conteudo)) {
-   	       $xml =  simplexml_load_string($conteudo);		
+        if (@$xml->loadXML($conteudo)) {   	       
             $elementoMae = $xml->getElementsByTagName('cServico')->item(0);
             $valorFrete = $elementoMae->childNodes->item(1)->nodeValue;
             $prazoEntrega = $elementoMae->childNodes->item(2)->nodeValue;
             $msgerro = $elementoMae->getElementsByTagName("MsgErro")->item(0)->nodeValue;
             $erro = $elementoMae->getElementsByTagName("Erro")->item(0)->nodeValue;
         } else {
+			$xml =  simplexml_load_string($conteudo);
 			// usa o simple xml file
 			$valorFrete = $xml->{'forma-pagamento'}->Valor;
 			$prazoEntrega = $xml->{'forma-pagamento'}->PrazoEntrega;
