@@ -193,14 +193,6 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
         return $result[$campo];
     }
 
-    function peso_total($c) {
-        $peso = 0;
-        foreach ($c->products as $p) {
-            $peso += ( ShopFunctions::convertWeigthUnit($p->product_weight, $p->product_weight_uom, "KG") * $p->quantity);
-        }
-        return $peso;
-    }
-
     function getCosts(VirtueMartCart $cart, $method, $cart_prices) {
         return $this->total;
     }
@@ -268,6 +260,7 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
         $url_busca = "http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx";
         $url_busca .= "?" . $workstring;
 
+		
 
 
         $this->retorno = $this->xml_correios($url_busca);
@@ -321,7 +314,7 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
             return false;
         }
         if ($erro) {
-            $this->erro_site_correios = "Aconteceu um erro no m&oacute;dulo SEDEX: " . $msgerro;
+            $this->erro_site_correios = "Erro no Webservice Correios SEDEX: " . $msgerro;
         }
 
         return array(
@@ -338,10 +331,9 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
         $this->logado = false;
         $mainframe = JFactory::getApplication();
         $cepOrigem = $this->cepOrigem = ereg_replace('[^0-9]', '', $this->vendedor("zip", $method->virtuemart_vendor_id));
-        $cepDestino = $this->cepDestino = ereg_replace('[^0-9]', '', $cart->ST["zip"] ?
-                        $cart->ST["zip"] :
-                        $cart->cep_simulacao
-        );
+
+		$address = (($cart->ST == 0) ? $cart->BT : $cart->ST);
+		$this->cepDestino = $address["zip"];
 
 		//verificar se está no Brasil
 		if ($cart->ST["virtuemart_country_id"] != 30) {
@@ -354,13 +346,14 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
 			return false;
 		}
 
+
             if (strlen($cepOrigem) < 8 || strlen($cepOrigem) > 11) {
                 $mainframe->enqueueMessage("Sedex erro: CEP da loja &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepOrigem);
                 return false;
             }
 
-            if ((strlen($cepDestino) < 8 || strlen($cepDestino) > 11) and $this->JUser->id) {
-                $mainframe->enqueueMessage("Sedex erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $cepDestino);
+            if ((strlen($this->cepDestino) < 8 || strlen($this->cepDestino) > 11) and $this->JUser->id) {
+                $mainframe->enqueueMessage("Sedex erro: CEP do destinat&aacute;rio &eacute; inv&aacute;lido - CEP deve ter 8 d&iacute;gitos num&eacute;ricos - " . $this->cepDestino);
                 return false;
             }
             /* =================================
@@ -373,12 +366,12 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
 
             if ($method->UsoFaixa_SN != "2") {
                 if ($method->UsoFaixa_SN == "0") {
-                    if ($cepDestino < $CepStart || $cepDestino > $CepEnd) {
+                    if ($this->cepDestino < $CepStart || $this->cepDestino > $CepEnd) {
                         $mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
                         return false;
                     }
                 } else {
-                    if ($cepDestino >= $CepStart && $cepDestino <= $CepEnd) {
+                    if ($this->cepDestino >= $CepStart && $this->cepDestino <= $CepEnd) {
                         $mainframe->enqueueMessage("A faixa de cep de entrega da loja n&atilde;o permite enviar para este endere&ccedil;o");
                         return false;
                     }
@@ -386,12 +379,13 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
             }
             //verifica se o carrinho está vazio (se a compra for efetuado o carrinho estará vazio)
             //deve fazer essa verificação para não enviar msg de aviso na tela de confirmação do pedido
-            /*if (!count($cart->products))
-                return false;
-			*/
+		$view = JRequest::getVar('view');
+		if (!count($cart->products) and $view == 'cart')
+			return false;
+
         // Verifica se o peso está dentro dos limites
         //não precisa estar logado
-        $this->Order_WeightKG = $this->peso_total($cart);
+		$this->Order_WeightKG = $orderWeight = $this->getOrderWeight($cart, $method->weight_unit);        		
 
         if ($this->Order_WeightKG > 30) {
             $mainframe->enqueueMessage("SEDEX erro: o peso de " . $this->Order_WeightKG . " Kg excede o peso m&aacute;ximo (30 Kg).");
@@ -403,7 +397,7 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
             $this->Order_WeightKG = 0.01;
         }
 
-        if(empty($cepDestino)) {
+        if(empty($this->cepDestino)) {
 			//$mainframe->enqueueMessage("Cep de Destino não-preenchido.");
 			return false;
 		}
@@ -416,8 +410,7 @@ class plgVmShipmentCorreios_Sedex extends vmPSPlugin {
             return false;
         }
 
-        $orderWeight = $this->getOrderWeight($cart, $method->weight_unit);
-        $address = (($cart->ST == 0) ? $cart->BT : $cart->ST);
+
 
         $nbShipment = 0;
         $countries = array();
